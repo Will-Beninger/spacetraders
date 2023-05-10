@@ -1,15 +1,33 @@
 from pathlib import Path
-import os
+import curses
+from os import getenv
 import requests
-#import pandas as pd
 
 class APIRequester:
-    def __init__(self, base_url, token):
-        self.base_url = base_url
+    def __init__(self, token):
+        self.base_url = "https://api.spacetraders.io/v2"
         self.auth_header = {'Authorization' : 'Bearer '+token}
+        #Variables awaiting initialization from login()
+        self.user = ""
+        self.account_id = ""
+        self.credits = 0
+        self.headquarters =""
 
-    def print_urls(self):
-        return
+    def login(self):
+        url = f"{self.base_url}/my/agent"
+        response = requests.get(url,headers=self.auth_header)
+        if (response.status_code == 200):
+            self.user         = response.json()['data']['symbol']
+            self.account_id   = response.json()['data']['accountId']
+            self.credits      = response.json()['data']['credits']
+            self.headquarters = response.json()['data']['headquarters']
+            return True
+        else:
+            return False
+
+    def get_header(self):
+        header = f"|  USER: {self.user}  |  CREDITS: {self.credits}  |"
+        return header
 
     def send_request(self, endpoint, method='GET', data=None):
         url = f"{self.base_url}/{endpoint}"
@@ -19,75 +37,39 @@ class APIRequester:
             response = requests.post(url, data=data, headers=self.auth_header)
         else:
             raise ValueError("Invalid HTTP method. Allowed values: 'GET' or 'POST'.")
-
         return response
 
-if __name__ == '__main__':
+def game_loop(s):
+    # Clear screen & Initialize Settings:
+    s.clear()
+    curses.init_pair(1,curses.COLOR_BLACK,curses.COLOR_WHITE)
+
     #Initialize the authorization token:
-    path = os.getenv('HOME') + '/.spacetraders/token'
+    path = getenv('HOME') + '/.spacetraders/token'
     token = Path(path).read_text()
     token = token.replace('\n', '')
+
     #Create new API Requester:
-    requester = APIRequester('https://api.spacetraders.io/v2',token)
+    requester = APIRequester(token)
 
-    while True:
-        print("Please select an endpoint:")
-        print("1. /my/agent")
-        print("2. /comments")
-        print("3. /albums")
-        print("4. /photos")
-        print("5. /todos")
-        print("6. /users")
-        endpoint_choice = input("> ")
+    #Test Login & Print Message
+    requester.login()
+    if (requester.login()):
+        text = "Successfully logged in! Welcome to the Game!"
+        s.addstr(curses.LINES//2,curses.COLS//2-len(text)//2,text,curses.color_pair(1))
+        s.refresh()
+    else:
+        raise LoginFailed("Initial Login Failed, Check Connection or Token")
+    curses.napms(2000)
+    s.clear()
 
-        if endpoint_choice == '1':
-            endpoint = 'my/agent'
-        elif endpoint_choice == '2':
-            endpoint = 'comments'
-        elif endpoint_choice == '3':
-            endpoint = 'albums'
-        elif endpoint_choice == '4':
-            endpoint = 'photos'
-        elif endpoint_choice == '5':
-            endpoint = 'todos'
-        elif endpoint_choice == '6':
-            endpoint = 'users'
-        else:
-            print("Invalid choice. Please try again.")
-            continue
+    #Create a header with the user's details:
+    header = requester.get_header()
+    s.addstr(0,curses.COLS//2-len(header)//2,header,curses.color_pair(1))
+    s.addstr(1,0,"This is line number 2!",curses.color_pair(1))
+    s.refresh()
+    curses.napms(2000)
 
-        print("Please select an HTTP method:")
-        print("1. GET")
-        print("2. POST")
-        method_choice = input("> ")
-
-        if method_choice == '1':
-            method = 'GET'
-        elif method_choice == '2':
-            method = 'POST'
-        else:
-            print("Invalid choice. Please try again.")
-            continue
-
-        if method == 'POST':
-            data = {}
-            while True:
-                key = input("Enter a key for the data (leave blank to finish): ")
-                if not key:
-                    break
-                value = input(f"Enter a value for the key '{key}': ")
-                data[key] = value
-        else:
-            data = None
-
-        response = requester.send_request(endpoint, method=method, data=data)
-
-#        if 'application/json' in response.headers['Content-Type']:
-            # If the response content type is JSON, parse it into a table
- #           df = pd.read_json(response.text)
-  #          print(df)
-   #     else:
-            # Otherwise, just print the response body
-        print(f"Response code: {response.status_code}")
-        print("Response body:")
-        print(response.text)
+if __name__ == '__main__':
+    #Initialize Curses Screen
+    curses.wrapper(game_loop)
