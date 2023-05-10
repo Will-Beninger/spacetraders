@@ -1,10 +1,12 @@
+from pathlib import Path
 import os
 import requests
-import pandas as pd
+#import pandas as pd
 
 class APIRequester:
-    def __init__(self, base_url):
+    def __init__(self, base_url, token):
         self.base_url = base_url
+        self.auth_header = {'Authorization' : 'Bearer '+token}
 
     def print_urls(self):
         return
@@ -12,9 +14,9 @@ class APIRequester:
     def send_request(self, endpoint, method='GET', data=None):
         url = f"{self.base_url}/{endpoint}"
         if method == 'GET':
-            response = requests.get(url)
+            response = requests.get(url,headers=self.auth_header)
         elif method == 'POST':
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, headers=self.auth_header)
         else:
             raise ValueError("Invalid HTTP method. Allowed values: 'GET' or 'POST'.")
 
@@ -22,9 +24,11 @@ class APIRequester:
 
 if __name__ == '__main__':
     #Initialize the authorization token:
-    
+    path = os.getenv('HOME') + '/.spacetraders/token'
+    token = Path(path).read_text()
+    token = token.replace('\n', '')
     #Create new API Requester:
-    requester = APIRequester('https://api.spacetraders.io/v2')
+    requester = APIRequester('https://api.spacetraders.io/v2',token)
 
     while True:
         print("Please select an endpoint:")
@@ -37,7 +41,7 @@ if __name__ == '__main__':
         endpoint_choice = input("> ")
 
         if endpoint_choice == '1':
-            endpoint = 'posts'
+            endpoint = 'my/agent'
         elif endpoint_choice == '2':
             endpoint = 'comments'
         elif endpoint_choice == '3':
@@ -78,12 +82,12 @@ if __name__ == '__main__':
 
         response = requester.send_request(endpoint, method=method, data=data)
 
-        if 'application/json' in response.headers['Content-Type']:
+#        if 'application/json' in response.headers['Content-Type']:
             # If the response content type is JSON, parse it into a table
-            df = pd.read_json(response.text)
-            print(df)
-        else:
+ #           df = pd.read_json(response.text)
+  #          print(df)
+   #     else:
             # Otherwise, just print the response body
-            print(f"Response code: {response.status_code}")
-            print("Response body:")
-            print(response.text)
+        print(f"Response code: {response.status_code}")
+        print("Response body:")
+        print(response.text)
