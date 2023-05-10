@@ -7,6 +7,7 @@ class APIRequester:
     def __init__(self, token):
         self.base_url = "https://api.spacetraders.io/v2"
         self.auth_header = {'Authorization' : 'Bearer '+token}
+
         #Variables awaiting initialization from login()
         self.user = ""
         self.account_id = ""
@@ -66,9 +67,22 @@ def game_loop(s):
     #Create a header with the user's details:
     header = requester.get_header()
     s.addstr(0,curses.COLS//2-len(header)//2,header,curses.color_pair(1))
-    s.addstr(1,0,"This is line number 2!",curses.color_pair(1))
     s.refresh()
-    curses.napms(2000)
+
+    #Create Option Menu:
+    menuStartY=2 #Set what Y axis to start the menu at
+    menuStartX=0 #Menu X Axis Alignment to the left
+    s.addstr(menuStartY,menuStartX,"Press 'q' to quit",curses.color_pair(1))
+
+    #Get Input:
+    while True:
+        c = s.getch()
+        if c == ord('q'):
+            break
+        else:
+            text = "You pressed:"+chr(c)
+            s.addstr(curses.LINES//2,curses.COLS//2-len(text)//2,text,curses.color_pair(1))
+
 
 if __name__ == '__main__':
     #Initialize Curses Screen
