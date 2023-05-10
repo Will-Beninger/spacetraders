@@ -27,7 +27,7 @@ class APIRequester:
             return False
 
     def get_header(self):
-        header = f"|  USER: {self.user}  |  CREDITS: {self.credits}  |"
+        header = f"| USER: {self.user} | CREDITS: {self.credits} | HQ: {self.headquarters} | ID: {self.account_id} |"
         return header
 
     def send_request(self, endpoint, method='GET', data=None):
@@ -40,10 +40,17 @@ class APIRequester:
             raise ValueError("Invalid HTTP method. Allowed values: 'GET' or 'POST'.")
         return response
 
+    def list_ships(self):
+        url = f"{self.base_url}/my/ships"
+        response = requests.get(url,headers=self.auth_header)
+        return response
+
 def game_loop(s):
     # Clear screen & Initialize Settings:
+    height, width = s.getmaxyx()
     s.clear()
     curses.init_pair(1,curses.COLOR_BLACK,curses.COLOR_WHITE)
+    curses.init_pair(2,curses.COLOR_RED,curses.COLOR_BLACK)
 
     #Initialize the authorization token:
     path = getenv('HOME') + '/.spacetraders/token'
@@ -57,7 +64,7 @@ def game_loop(s):
     requester.login()
     if (requester.login()):
         text = "Successfully logged in! Welcome to the Game!"
-        s.addstr(curses.LINES//2,curses.COLS//2-len(text)//2,text,curses.color_pair(1))
+        s.addstr(height//2,width//2-len(text)//2,text,curses.color_pair(1))
         s.refresh()
     else:
         raise LoginFailed("Initial Login Failed, Check Connection or Token")
@@ -66,19 +73,25 @@ def game_loop(s):
 
     #Create a header with the user's details:
     header = requester.get_header()
-    s.addstr(0,curses.COLS//2-len(header)//2,header,curses.color_pair(1))
-    s.refresh()
+    center = width//2-len(header)//2
+    if (center<0):
+        center=0
+    s.addnstr(0,center,header,curses.COLS,curses.color_pair(1))
 
     #Create Option Menu:
     menuStartY=2 #Set what Y axis to start the menu at
     menuStartX=0 #Menu X Axis Alignment to the left
-    s.addstr(menuStartY,menuStartX,"Press 'q' to quit",curses.color_pair(1))
+    s.addstr(menuStartY,menuStartX,"Press 'q' to quit",curses.color_pair(2))
+    s.addstr(menuStartY+1,menuStartX,"1. List Ships",curses.color_pair(2))
 
     #Get Input:
     while True:
         c = s.getch()
         if c == ord('q'):
             break
+        elif c == ord('1'): #List Ships
+            output = requester.list_ships()
+            
         else:
             text = "You pressed:"+chr(c)
             s.addstr(curses.LINES//2,curses.COLS//2-len(text)//2,text,curses.color_pair(1))
